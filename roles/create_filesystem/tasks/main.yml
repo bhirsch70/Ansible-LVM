@@ -1,0 +1,29 @@
+---
+- name: Partition new disk
+  command: parted -s -a optimal {{ new_disk }} mklabel gpt
+  command: parted -s -a optimal {{ new_disk }} mkpart primary 0% 100%
+
+- name: Create Phyiscal Volume (PV) and extend Volume Group (VG)
+  lvg:
+    vg: rhel
+    pvs: {{ new_disk }}
+    state: present
+  when:
+    - ansible_distribution == "RedHat"
+    - ansible_distribution_major_version == "7"
+
+- name: Create Logical Volume (LV)
+  lvol:
+    vg: rhel
+    lv: lv_data
+    size: 100%FREE
+    state: present
+  when:
+    - ansible_distribution == "RedHat"
+    - ansible_distribution_major_version == "7"
+
+- name: Create File System
+  filesystem:
+    fstype: xfs
+    dev: {{ new_disk }}
+    
