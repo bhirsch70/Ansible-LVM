@@ -1,21 +1,23 @@
 ---
+- name: Label new disk
+  command: parted -s -a optimal "{{ new_dev }}" mklabel gpt
+
 - name: Partition new disk
-  command: parted -s -a optimal {{ new_disk }} mklabel gpt
-  command: parted -s -a optimal {{ new_disk }} mkpart primary 0% 100%
+  command: parted -s -a optimal "{{ new_dev }}" mkpart primary 0% 100%
 
 - name: Create Phyiscal Volume (PV) and extend Volume Group (VG)
-  lvg:
-    vg: rhel
-    pvs: {{ new_disk }}
-    state: present
+  command: vgextend {{ rhel7_vg }} {{ new_disk }}
+  #lvg:
+    #vg: "{{ rhel7_vg }}"
+    #pvs: "{{ new_disk }}"
   when:
     - ansible_distribution == "RedHat"
     - ansible_distribution_major_version == "7"
 
 - name: Create Logical Volume (LV)
   lvol:
-    vg: rhel
-    lv: lv_data
+    vg: "{{ rhel7_vg }}"
+    lv: "{{ rhel_lv }}"
     size: 100%FREE
     state: present
   when:
@@ -25,5 +27,18 @@
 - name: Create File System
   filesystem:
     fstype: xfs
-    dev: {{ new_disk }}
-    
+    dev: "/dev/{{ rhel7_vg }}/{{ rhel_lv }}"
+  when:
+    - ansible_distribution == "RedHat"
+    - ansible_distribution_major_version == "7"
+
+- name: Mount new file System
+  mount:
+    name: /newfs
+    src: "/dev/mapper/{{ rhel7_vg }}-{{ rhel_lv }}"
+    fstype: xfs
+    opts: noatime,nodiratime
+    state: mounted
+  when:
+    - ansible_distribution == "RedHat"
+    - ansible_distribution_major_version == "7"
