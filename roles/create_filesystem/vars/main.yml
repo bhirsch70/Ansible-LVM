@@ -1,0 +1,5 @@
+new_dev: /dev/vdb
+new_disk: /dev/vdb1
+rhel7_vg: rhel
+rhel6_vg: vg_root
+rhel_lv: lv_data
