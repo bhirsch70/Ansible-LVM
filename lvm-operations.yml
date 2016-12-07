@@ -1,0 +1,59 @@
+# lvm-operations.yml
+#
+# Required variables:
+#   target_machines: a list of IP addresses or DNS names of VMs to target
+#
+# Assumptions:
+#   - all target VMs use the same credentials for authentication
+#
+---
+- name: Setup for operating on the target VMs.
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Add a target VM to inventory.
+      add_host:
+        hostname: target-vm-{{ item.0 }}
+        group: target-vm
+        ansible_host: "{{ item.1 }}"
+      with_indexed_items: "{{ target_machines | default([]) }}"
+
+- name: Perform operations on all target VMs.
+  hosts: target-vms
+  gather_facts: yes
+  become: yes
+  become_user: root
+  become_method: sudo
+  vars:
+    devices:
+      - vdb
+      - vdc
+      - vdd
+      - vde
+      - vdf
+      - vdg
+  tasks:
+    - name: Set OS specific variables for RHEL 6.
+      set_fact:
+        lvm_vg_name: vg_root
+        fs_type: ext4
+      when:
+        - "{{ ansible_distribution }} == 'RedHat'"
+        - "{{ ansible_distribution_major_version }} == 6"
+
+    - name: Set OS specific variables for RHEL 7.
+      set_fact:
+        lvm_vg_name: rhel
+        fs_type: xfs
+      when:
+        - "{{ ansible_distribution }} == 'RedHat'"
+        - "{{ ansible_distribution_major_version }} == 7"
+
+    - include: operations/fix-device.yml
+      vars:
+        device: "{{ item.value }}"
+        device_name: "{{ item.key }}"
+        device_path: /dev/{{ item.key }}
+      when: item.key in devices
+      with_dict: "{{ ansible_devices }}"

@@ -1,7 +1,0 @@
----
-- name: create file system on a rhel VM
-  hosts: all
-  become: true
-  
-  roles:
-    - create_filesystem
