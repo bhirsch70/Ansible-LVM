@@ -1,0 +1,42 @@
+---
+- name: Store the mount point.
+  set_fact:
+    mount_point: "{{ item.mount }}"
+  when: item.device == '{{ device_path }}'
+  with_items: "{{ ansible_mounts }}"
+
+- name: Unmount the device.
+  mount:
+    name: "{{ mount }}"
+    state: unmounted
+  when: item.device == '{{ device_path }}'
+  with_items: "{{ ansible_mounts }}"
+
+- name: Label the device.
+  command: parted -s -a optimal "{{ device_path }}" mklabel gpt
+
+- name: Partition the device.
+  command: parted -s -a optimal "{{ device_path }}" mkpart primary 0% 100%
+
+- name: Create a LVM PV on the device.
+  command: vgextend {{ lvm_vg_name }} {{ device_path }}
+
+- name: Create a LVM LV on the device that uses the all space.
+  lvol:
+    vg: "{{ lvm_vg_name }}"
+    lv: lv_data
+    size: 100%FREE
+    state: present
+
+- name: Ensure a filesystem is created on the device.
+  filesystem:
+    fstype: "{{ fs_type }}"
+    dev: /dev/{{ lvm_vg_name }}/lv_data
+
+- name: Mount the device.
+  mount:
+    name: "{{ mount_point }}"
+    src: /dev/mapper/{{ lvm_vg_name }}-lv_data
+    fstype: "{{ fs_type }}"
+    opts: noatime,nodiratime
+    state: mounted
