@@ -52,8 +52,10 @@
 
     - include: operations/fix-device.yml
       vars:
-        device: "{{ item.value }}"
-        device_name: "{{ item.key }}"
-        device_path: /dev/{{ item.key }}
-      when: item.key in devices
+        device_name: "{{ outer_item.key }}"
+        device_path: /dev/{{ outer_item.key }}
+        device: "{{ outer_item.value }}"
+      when: outer_item.key in devices
       with_dict: "{{ ansible_devices }}"
+      loop_control:
+        loop_var: outer_item
