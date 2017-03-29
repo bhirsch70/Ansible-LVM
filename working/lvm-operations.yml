@@ -7,27 +7,34 @@
 #   - all target VMs use the same credentials for authentication
 #
 ---
-#- name: Setup for operating on the target VMs.
-#  hosts: localhost
-#  connection: local
-#  gather_facts: no
-#  tasks:
-#    - name: Add a target VM to inventory.
-#      add_host:
-#        hostname: target-vm-{{ item.0 }}
-#        group: target-vm
-#        ansible_host: "{{ item.1 }}"
-#      with_indexed_items: "{{ target_machines | default([]) }}"
+- name: Setup for operating on the target VMs.
+  hosts: localhost
+  connection: local
+  gather_facts: no
+  tasks:
+    - name: Add a target VM to inventory.
+      add_host:
+        hostname: target-vm-{{ item.0 }}
+        group: target-vms
+        ansible_host: "{{ item.1 }}"
+      with_indexed_items: "{{ target_machines | default([]) }}"
 
 - name: Perform operations on all target VMs.
-#  hosts: target-vms
-  hosts: all
+  hosts: target-vms
+#  hosts: all
   gather_facts: yes
 #  become: yes
 #  become_user: root
 #  become_method: sudo
   vars:
+    lv_name: lv_data
+    mount_point: ''
     devices:
+      - sdc
+      - sdd
+      - sde
+      - sdf
+      - sdg
       - vdb
       - vdc
       - vdd

@@ -1,0 +1,36 @@
+---
+- name: Does the logical volume exist?
+  shell: /sbin/lvs /dev/{{ lvm_vg_name }}/{{ lv_name }}
+  changed_when: False
+  register: lv_exists
+  ignore_errors: True
+
+- name: Create a Physical Volume on the device
+  shell: /sbin/pvcreate {{ device_path }}
+
+- name: Extend the Logical Volume Group with the device
+  shell: /sbin/vgextend {{ lvm_vg_name }} {{ device_path }}
+
+- name: Create a LVM LV on the device that uses the all space.
+  lvol:
+    vg: "{{ lvm_vg_name }}"
+    lv: "{{ lv_name }}"
+    size: +100%FREE
+    state: present
+
+- name: Ensure a filesystem is created on the device.
+  filesystem:
+    fstype: "{{ fs_type }}"
+    dev: /dev/{{ lvm_vg_name }}/{{ lv_name }}
+
+- name: Mount xfs device
+  mount:
+    name: "{{ mount_point }}"
+    src: /dev/mapper/{{ lvm_vg_name }}-{{ lv_name }}
+    fstype: "{{ fs_type }}"
+    opts: noatime,nodiratime
+    state: mounted
+
+- name: Grow xfs
+  shell: /sbin/xfs_growfs -d /dev/{{ lvm_vg_name }}/{{ lv_name }}
+  when: lv_exists.rc == 0
